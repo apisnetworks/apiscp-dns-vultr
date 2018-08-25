@@ -179,15 +179,18 @@
 				$record['name'] = '';
 			}
 			try {
-				$ret = $api->do('POST', 'dns/create_record', ['domain' => $zone] + $this->formatRecord($record));
+				$api->do('POST', 'dns/create_record', ['domain' => $zone] + $this->formatRecord($record));
 				$this->addCache($record);
 			} catch (ClientException $e) {
 				$fqdn = ltrim(implode('.', [$subdomain, $zone]), '.');
-
+				if ($e->getResponse()->getStatusCode() === 412 &&
+					false !== strpos($e->getResponse()->getBody()->getContents(), 'Duplicate records not allowed'))
+				{
+					return warn("Duplicate record for `%s' type %s %s skipped", $fqdn, $rr, $param);
+				}
 				return error("Failed to create record `%s' type %s: %s", $fqdn, $rr, $e->getMessage());
 			}
-
-			return (bool)$ret;
+			return $api->getResponse()->getStatusCode() === 200;
 		}
 
 		/**

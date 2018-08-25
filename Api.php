@@ -14,6 +14,7 @@
 
 namespace Opcenter\Dns\Providers\Vultr;
 
+use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\Psr7\Response;
 
 class Api {
@@ -57,14 +58,23 @@ class Api {
 			$endpoint = ltrim($endpoint, '/');
 		}
 		$paramKey = $method === 'POST' ? 'form_params' : 'query';
-		$this->lastResponse = $this->client->request($method, $endpoint, [
-			'headers' => [
-				'User-Agent' => PANEL_BRAND . " " . APNSCP_VERSION,
-				'API-Key' => $this->key,
-				'Accept' => 'application/json'
-			],
-			$paramKey => $params
-		]);
+		try {
+			$this->lastResponse = $this->client->request($method, $endpoint, [
+				'headers' => [
+					'User-Agent' => PANEL_BRAND . " " . APNSCP_VERSION,
+					'API-Key' => $this->key,
+					'Accept' => 'application/json'
+				],
+				$paramKey => $params
+			]);
+		} catch (ServerException $e) {
+			if ($e->getResponse()->getStatusCode() === 503) {
+				// 2 req/s is stupid.
+				usleep(500000);
+				return $this->do($method, $endpoint, $params);
+			}
+			throw $e;
+		}
 		return \json_decode($this->lastResponse->getBody()->getContents(), true) ?? [];
 	}
 
