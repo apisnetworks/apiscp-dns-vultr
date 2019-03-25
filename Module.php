@@ -16,7 +16,7 @@
 
 	use GuzzleHttp\Exception\ClientException;
 	use Module\Provider\Contracts\ProviderInterface;
-	use Opcenter\Dns\Record;
+	use Opcenter\Dns\Record as BaseRecord;
 
 	class Module extends \Dns_Module implements ProviderInterface
 	{
@@ -80,6 +80,7 @@
 				$record['name'] = '';
 			}
 			try {
+				// success returns nothing (wtf...)
 				$api->do('POST', 'dns/create_record', ['domain' => $zone] + $this->formatRecord($record));
 				$this->addCache($record);
 			} catch (ClientException $e) {
@@ -256,7 +257,7 @@
 		 * @param Record $new
 		 * @return bool
 		 */
-		protected function atomicUpdate(string $zone, Record $old, Record $new): bool
+		protected function atomicUpdate(string $zone, BaseRecord $old, BaseRecord $new): bool
 		{
 			if (!$this->canonicalizeRecord($zone, $old['name'], $old['rr'], $old['parameter'], $old['ttl'])) {
 				return false;
@@ -309,40 +310,51 @@
 			string &$param,
 			int &$ttl = null
 		): bool {
-			if (strtoupper($rr) === 'SSHFP') {
+			$rr = strtoupper($rr);
+			if ($rr === 'SSHFP') {
 				$param = strtolower($param);
+			} else if ($rr === 'MX' && $param[-1] !== '.') {
+				$param .= '.';
 			}
 			return parent::canonicalizeRecord($zone, $subdomain, $rr, $param,
 				$ttl);
 		}
 
 
+		/**
+		 * Format record before sending to API
+		 *
+		 * @param Record $r
+		 * @return array
+		 */
 		protected function formatRecord(Record $r)
 		{
 			$args = [
+				'name' => $r['name'],
 				'type' => strtoupper($r['rr']),
 				'ttl'  => $r['ttl'] ?? static::DNS_TTL
 			];
 			switch ($args['type']) {
+				case 'CAA':
+					$r['parameter'] = $r->getMeta('flags') . ' ' . $r->getMeta('tag') . ' ' . $r->getMeta('data');
 				case 'A':
 				case 'AAAA':
-				case 'CAA':
 				case 'CNAME':
 				case 'NS':
 				case 'SSHFP':
 				case 'TXT':
-					return $args + ['name' => $r['name'], 'data' => $r['parameter']];
+					return $args + ['data' => $r['parameter']];
 				case 'MX':
-					return $args + ['name'     => $r['name'],
-									'priority' => (int)$r->getMeta('priority'),
-									'data'     => rtrim($r->getMeta('data'), '.') . '.'
-						];
+					return $args + [
+						'priority' => (int)$r->getMeta('priority'),
+						'data'     => rtrim($r->getMeta('data'), '.') . '.'
+					];
 				case 'SRV':
 					return $args + [
-							'name'     => $r['name'],
-							'priority' => $r->getMeta('priority'),
-							'data'     => $r->getMeta('weight') . ' ' . $r->getMeta('port') . ' ' . $r->getMeta('data')
-						];
+						'name'     => $r['name'],
+						'priority' => $r->getMeta('priority'),
+						'data'     => $r->getMeta('weight') . ' ' . $r->getMeta('port') . ' ' . $r->getMeta('data')
+					];
 				default:
 					fatal("Unsupported DNS RR type `%s'", $r['type']);
 			}
