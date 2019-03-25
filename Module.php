@@ -292,6 +292,31 @@
 			return true;
 		}
 
+		/**
+		 * Normalize record
+		 *
+		 * @param string   $zone
+		 * @param string   $subdomain
+		 * @param string   $rr
+		 * @param string   $param
+		 * @param int|null $ttl
+		 * @return bool
+		 */
+		protected function canonicalizeRecord(
+			string &$zone,
+			string &$subdomain,
+			string &$rr,
+			string &$param,
+			int &$ttl = null
+		): bool {
+			if (strtoupper($rr) === 'SSHFP') {
+				$param = strtolower($param);
+			}
+			return parent::canonicalizeRecord($zone, $subdomain, $rr, $param,
+				$ttl);
+		}
+
+
 		protected function formatRecord(Record $r)
 		{
 			$args = [
