@@ -97,15 +97,9 @@
 		}
 
 		/**
-		 * Remove a DNS record
-		 *
-		 * @param string      $zone
-		 * @param string      $subdomain
-		 * @param string      $rr
-		 * @param string|null $param
-		 * @return bool
+		 * @inheritDoc
 		 */
-		public function remove_record(string $zone, string $subdomain, string $rr, string $param = null): bool
+		public function remove_record(string $zone, string $subdomain, string $rr, string $param = ''): bool
 		{
 			if (!$this->canonicalizeRecord($zone, $subdomain, $rr, $param, $ttl)) {
 				return false;
