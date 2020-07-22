@@ -161,7 +161,7 @@
 		{
 			$api = $this->makeApi();
 			try {
-				$api->do('POST', "dns/delete_domain", ['domain' => $domain]);
+				$api->do('POST', 'dns/delete_domain', ['domain' => $domain]);
 			} catch (ClientException $e) {
 				return error("Failed to remove zone `%s', error: %s", $domain, $e->getMessage());
 			}
@@ -175,11 +175,11 @@
 		 * @param string $domain
 		 * @return null|string
 		 */
-		protected function zoneAxfr($domain): ?string
+		protected function zoneAxfr(string $domain): ?string
 		{
 			$client = $this->makeApi();
 			try {
-				$client->do('GET', "dns/soa_info", ['domain' => $domain]);
+				$client->do('GET', 'dns/soa_info', ['domain' => $domain]);
 			} catch (ClientException $e) {
 				return null;
 			}
@@ -194,7 +194,7 @@
 				$zoneText = [$soa['name'] . '. ' . $soa['ttl'] . ' IN SOA ' . $soa['parameter']];
 				$records = $client->do('GET', 'dns/records', ['domain' => $domain]);
 			} catch (ClientException $e) {
-				error("Failed to transfer DNS records from Vultr - try again later");
+				error('Failed to transfer DNS records from Vultr - try again later');
 
 				return null;
 			}
@@ -204,7 +204,7 @@
 				switch ($r['type']) {
 					case 'SRV':
 					case 'MX':
-						$parameter = $r['priority'] . " " . $r['data'];
+						$parameter = $r['priority'] . ' ' . $r['data'];
 						break;
 					default:
 						$parameter = $r['data'];

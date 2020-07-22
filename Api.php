@@ -63,7 +63,7 @@
 			try {
 				$this->lastResponse = $this->client->request($method, $endpoint, [
 					'headers' => [
-						'User-Agent' => PANEL_BRAND . " " . APNSCP_VERSION,
+						'User-Agent' => PANEL_BRAND . ' ' . APNSCP_VERSION,
 						'API-Key'    => $this->key,
 						'Accept'     => 'application/json'
 					],
