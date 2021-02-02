@@ -19,7 +19,7 @@
 
 	class Api
 	{
-		protected const VULTR_ENDPOINT = 'https://api.vultr.com/v1/';
+		protected const VULTR_ENDPOINT = 'https://api.vultr.com/v2/';
 		/**
 		 * @var \GuzzleHttp\Client
 		 */
@@ -50,7 +50,7 @@
 		public function do(string $method, string $endpoint, array $params = []): array
 		{
 			$method = strtoupper($method);
-			if (!\in_array($method, ['GET', 'POST'])) {
+			if (!\in_array($method, ['GET', 'POST', 'DELETE', 'PATCH'])) {
 				error("Unknown method `%s'", $method);
 
 				return [];
@@ -59,13 +59,13 @@
 				warn("Stripping `/' from endpoint `%s'", $endpoint);
 				$endpoint = ltrim($endpoint, '/');
 			}
-			$paramKey = $method === 'POST' ? 'form_params' : 'query';
+			$paramKey = \in_array($method, ['POST', 'DELETE', 'PATCH'], true) ? 'json' : 'query';
 			try {
 				$this->lastResponse = $this->client->request($method, $endpoint, [
 					'headers' => [
-						'User-Agent' => PANEL_BRAND . ' ' . APNSCP_VERSION,
-						'API-Key'    => $this->key,
-						'Accept'     => 'application/json'
+						'User-Agent'    => PANEL_BRAND . ' ' . APNSCP_VERSION,
+						'Authorization' => 'Bearer ' . $this->key,
+						'Accept'        => 'application/json'
 					],
 					$paramKey => $params
 				]);

@@ -28,7 +28,7 @@
 		public static function keyValid(string $key): bool
 		{
 			try {
-				(new Api($key))->do('GET', 'account/info');
+				(new Api($key))->do('GET', 'account');
 			} catch (RequestException $e) {
 				$status = $e->getResponse()->getStatusCode();
 				if (403 === $status) {

@@ -79,7 +79,7 @@
 			}
 			try {
 				// success returns nothing (wtf...)
-				$api->do('POST', 'dns/create_record', ['domain' => $zone] + $this->formatRecord($record));
+				$api->do('POST', 'domains/' . $zone . '/records', $this->formatRecord($record));
 				$this->addCache($record);
 			} catch (ClientException $e) {
 				$fqdn = ltrim(implode('.', [$subdomain, $zone]), '.');
@@ -91,7 +91,7 @@
 				return error("Failed to create record `%s' type %s: %s", $fqdn, $rr, $e->getMessage());
 			}
 
-			return $api->getResponse()->getStatusCode() === 200;
+			return $api->getResponse()->getStatusCode() === 201;
 		}
 
 		/**
@@ -113,7 +113,7 @@
 			}
 
 			try {
-				$api->do('POST', 'dns/delete_record', ['domain' => $zone, 'RECORDID' => $id]);
+				$api->do('DELETE', 'domains/' . $zone . '/records/' . $id);
 			} catch (ClientException $e) {
 				$fqdn = ltrim(implode('.', [$subdomain, $zone]), '.');
 
@@ -124,7 +124,7 @@
 				return $v['id'] === $r['id'];
 			});
 
-			return $api->getResponse()->getStatusCode() === 200;
+			return $api->getResponse()->getStatusCode() === 204;
 		}
 
 		/**
@@ -141,9 +141,8 @@
 			 */
 			$api = $this->makeApi();
 			try {
-				$api->do('POST', 'dns/create_domain', [
-					'domain'   => $domain,
-					'serverip' => $ip
+				$api->do('POST', 'domains', [
+					'domain'   => $domain
 				]);
 			} catch (ClientException $e) {
 				return error("Failed to add zone `%s', error: %s", $domain, $e->getMessage());
@@ -162,7 +161,7 @@
 		{
 			$api = $this->makeApi();
 			try {
-				$api->do('POST', 'dns/delete_domain', ['domain' => $domain]);
+				$api->do('DELETE', 'domains/' . $domain);
 			} catch (ClientException $e) {
 				return error("Failed to remove zone `%s', error: %s", $domain, $e->getMessage());
 			}
@@ -180,7 +179,7 @@
 		{
 			$client = $this->makeApi();
 			try {
-				$client->do('GET', 'dns/soa_info', ['domain' => $domain]);
+				$client->do('GET', 'domains/' . $domain . '/soa');
 			} catch (ClientException $e) {
 				return null;
 			}
@@ -193,7 +192,7 @@
 					return null;
 				}
 				$zoneText = [$soa['name'] . '. ' . $soa['ttl'] . ' IN SOA ' . $soa['parameter']];
-				$records = $client->do('GET', 'dns/records', ['domain' => $domain]);
+				$records = $client->do('GET', 'domains/' . $domain . '/records', ['per_page' => 500]);
 			} catch (ClientException $e) {
 				error('Failed to transfer DNS records from Vultr - try again later');
 
@@ -201,7 +200,7 @@
 			}
 
 			$this->zoneCache[$domain] = [];
-			foreach ($records as $r) {
+			foreach (array_get($records, 'records', []) as $r) {
 				switch ($r['type']) {
 					case 'SRV':
 					case 'MX':
@@ -217,7 +216,7 @@
 						'ttl'       => $r['ttl'] ?? static::DNS_TTL,
 						'parameter' => $parameter,
 						'meta'      => [
-							'id' => $r['RECORDID']
+							'id' => $r['id']
 						]
 					]
 				);
@@ -269,8 +268,7 @@
 				$merged = clone $old;
 				$new = $merged->merge($new);
 				$id = $this->getRecordId($old);
-				$api->do('POST', 'dns/update_record',
-					['domain' => $zone, 'RECORDID' => $id] + $this->formatRecord($new));
+				$api->do('PATCH', 'domains/' . $zone . '/records/' . $id, $this->formatRecord($new));
 			} catch (ClientException $e) {
 				$reason = \json_decode($e->getResponse()->getBody()->getContents());
 
