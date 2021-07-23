@@ -30,12 +30,19 @@
 			try {
 				(new Api($key))->do('GET', 'account');
 			} catch (RequestException $e) {
-				$status = $e->getResponse()->getStatusCode();
-				if (403 === $status) {
-					return error('Vultr key failed: invalid key');
+				$reason = $e->getMessage();
+				if (null !== ($response = $e->getResponse())) {
+					if (403 === $response->getStatusCode()) {
+						$reason = \ArgumentFormatter::format('invalid key');
+					} else {
+						$reason = "Unknown HTTP status, " . $response->getStatusCode();
+					}
 				}
 
-				return error("Unable to verify Vultr key. Unknown HTTP status `%d' returned", $status);
+				return error('%(provider)s key validation failed: %(reason)s', [
+					'provider' => 'Vultr',
+					'reason'   => $reason
+				]);
 			}
 
 			return true;
