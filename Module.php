@@ -17,11 +17,14 @@
 	use GuzzleHttp\Exception\ClientException;
 	use Illuminate\Support\Arr;
 	use Module\Provider\Contracts\ProviderInterface;
+	use Opcenter\Crypto\Keyring;
+	use Opcenter\Crypto\KeyringTrait;
 	use Opcenter\Dns\Record as BaseRecord;
 
 	class Module extends \Dns_Module implements ProviderInterface
 	{
 		use \NamespaceUtilitiesTrait;
+		use KeyringTrait;
 
 		/**
 		 * apex markers are marked with @
@@ -46,6 +49,10 @@
 		{
 			parent::__construct();
 			$this->key = $this->getServiceValue('dns', 'key', DNS_PROVIDER_KEY);
+
+			if (Keyring::is($this->key)) {
+				$this->key = $this->readKeyringValue($this->key);
+			}
 		}
 
 		/**
