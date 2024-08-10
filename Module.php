@@ -30,6 +30,7 @@
 		 * apex markers are marked with @
 		 */
 		protected const HAS_ORIGIN_MARKER = false;
+		public const SHOW_NS_APEX = false;
 		protected static $permitted_records = [
 			'A',
 			'AAAA',
